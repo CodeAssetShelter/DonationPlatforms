@@ -43,23 +43,31 @@ namespace Donate
             {
                 //Console.WriteLine(o);
 
-                string pattern = "\"payload\":\"(.*?)\",";
+                // 응답받는 html 의 구조가 변화함
+                string pattern = @"window\.payload\s*=\s*JSON\.parse\(\s*(?<json>""(?:\\.|[^""\\])*"")\s*\)";
+                Match m = Regex.Match(o, pattern, RegexOptions.Singleline);
                 string payload = string.Empty;
-                Match match = Regex.Match(o, pattern);
-                if (match.Success)
+                if (m.Success)
                 {
-                    // 그룹 1번이 "payload":"와 ", 사이에 있는 내용
-                    payload = match.Groups[1].Value.Trim();
-                    Console.WriteLine(payload);
-                }
+                    // 추출한 그룹 "json"은 큰따옴표를 포함한 문자열
+                    string jsonString = m.Groups["json"].Value;
+                    // Newtonsoft.Json을 사용하여 이 문자열을 디코드(언이스케이프)
+                    string decodedJson = JsonConvert.DeserializeObject<string>(jsonString);
 
-                if (string.IsNullOrEmpty(payload))
+                    // decodedJson은 이제 payload 객체의 JSON 텍스트
+                    // 이를 JObject로 파싱
+                    JObject payloadObject = JObject.Parse(decodedJson);
+
+                    // "payload" 키의 값을 추출
+                    string payloadValue = (string)payloadObject["payload"];
+                    payload = payloadValue;
+                    Console.WriteLine("추출된 payload 값:");
+                    Console.WriteLine(payloadValue);
+                }
+                else
                 {
-                    Console.WriteLine($"payload is null or empty");
-                    return null;
+                    Console.WriteLine("JSON 문자열을 찾지 못했습니다.");
                 }
-
-                Console.WriteLine(m_URL_Toon + $"{payload}");
 
 
                 // 웹소켓샾 버전
